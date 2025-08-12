@@ -1,0 +1,14 @@
+## 🚀 Installation
+
+```bash
+# Cloner le projet
+git clone https://github.com/YOUR_USERNAME/HurluBio.git
+
+# Aller dans le dossier
+cd HurluBio
+
+# Installer les dépendances
+npm install
+
+# Lancer en développement  
+npm run dev

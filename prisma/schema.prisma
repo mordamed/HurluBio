@@ -1,0 +1,75 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Producer {
+  id            String      @id @default(cuid())
+  name          String
+  description   String?
+  location      String
+  email         String
+  phone         String?
+  certifications String?    // Stocké comme JSON string
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+  vegetables    Vegetable[]
+
+  @@map("producers")
+}
+
+model Vegetable {
+  id          String      @id @default(cuid())
+  name        String
+  description String?
+  price       Float
+  unit        String
+  category    String
+  season      String?
+  inStock     Boolean     @default(true)
+  image       String?
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  producer    Producer    @relation(fields: [producerId], references: [id], onDelete: Cascade)
+  producerId  String
+  orderItems  OrderItem[] // Nouvelle relation
+
+  @@map("vegetables")
+}
+
+
+model Order {
+  id          String      @id @default(cuid())
+  customerName    String
+  customerEmail   String
+  customerPhone   String?
+  deliveryAddress String
+  deliveryDate    DateTime
+  totalAmount     Float
+  status          String      @default("pending") // pending, confirmed, preparing, ready, delivered
+  notes           String?
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+  items           OrderItem[]
+
+  @@map("orders")
+}
+
+model OrderItem {
+  id          String    @id @default(cuid())
+  quantity    Int
+  price       Float     // Prix au moment de la commande
+  vegetable   Vegetable @relation(fields: [vegetableId], references: [id])
+  vegetableId String
+  order       Order     @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  orderId     String
+
+  @@map("order_items")
+}
