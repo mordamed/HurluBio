@@ -41,7 +41,7 @@ export default function OrderCard({ order }: OrderCardProps) {
             Commande #{order.id}
           </h3>
           <p className="text-sm text-gray-600">
-            {new Date(order.orderDate).toLocaleDateString('fr-FR')}
+            {new Date(order.order_date).toLocaleDateString('fr-FR')}
           </p>
         </div>
         <span className={`px-3 py-1 rounded-full text-sm font-medium ${statusColors[order.status]}`}>
@@ -53,10 +53,10 @@ export default function OrderCard({ order }: OrderCardProps) {
       <div className="mb-4">
         <h4 className="font-medium text-gray-900 mb-2">👤 Client</h4>
         <div className="text-sm text-gray-600 space-y-1">
-          <p><strong>{order.customerName}</strong></p>
-          <p>📧 {order.customerEmail}</p>
-          <p>📱 {order.customerPhone}</p>
-          <p>📍 {order.customerAddress}</p>
+          <p><strong>{order.customer_name}</strong></p>
+          <p>📧 {order.customer_email}</p>
+          <p>📱 {order.customer_phone}</p>
+          <p>📍 {order.customer_address}</p>
         </div>
       </div>
 
@@ -78,7 +78,11 @@ export default function OrderCard({ order }: OrderCardProps) {
         <div className="border-t mt-2 pt-2">
           <div className="flex justify-between font-semibold">
             <span>Total</span>
-            <span>{order.total.toFixed(2)}€</span>
+<span>
+  {order.items
+    .reduce((sum, item) => sum + (item.quantity * item.price), 0)
+    .toFixed(2)}€
+</span>
           </div>
         </div>
       </div>
