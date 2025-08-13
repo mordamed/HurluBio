@@ -1,3 +1,15 @@
+# 🌱 HurluBio
+
+Application e-commerce pour légumes bio locaux développée avec Next.js.
+
+## ✨ Fonctionnalités
+
+- 🛒 Panier d'achat avec gestion des quantités
+- 📱 Interface responsive 
+- 🥬 Catalogue de légumes bio
+- 👨‍🌾 Informations producteurs
+- 💾 Sauvegarde locale du panier
+
 ## 🚀 Installation
 
 ```bash
