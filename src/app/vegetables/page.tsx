@@ -1,207 +1,175 @@
 import { prisma } from '@/lib/prisma'
-import { Suspense } from 'react'
+import Link from 'next/link'
+import VegetableCard from '@/components/VegetableCard'
+import FilterSidebar from '@/components/FilterSidebar'
+import SearchAndSort from '@/components/SearchAndSort'
 
 interface SearchParams {
-  search?: string
   category?: string
   producer?: string
-  minPrice?: string
-  maxPrice?: string
+  season?: string
+  search?: string
+  sort?: string
 }
 
-interface Props {
+interface VegetablesPageProps {
   searchParams: SearchParams
 }
 
-export default async function ProductsPage({ searchParams }: Props) {  // ← Renommé VegetablesPage
-  const { search, category, producer, minPrice, maxPrice } = searchParams
-
+export default async function VegetablesPage({ searchParams }: VegetablesPageProps) {
   // Construire les filtres
   const where: any = {}
-
-  if (search) {
+  
+  if (searchParams.category) {
+    where.category = searchParams.category
+  }
+  
+  if (searchParams.producer) {
+    where.producerId = searchParams.producer
+  }
+  
+  if (searchParams.season) {
+    where.season = {
+      contains: searchParams.season
+    }
+  }
+  
+  if (searchParams.search) {
     where.OR = [
-      { name: { contains: search, mode: 'insensitive' } },
-      { description: { contains: search, mode: 'insensitive' } }
+      { name: { contains: searchParams.search, mode: 'insensitive' } },
+      { description: { contains: searchParams.search, mode: 'insensitive' } }
     ]
   }
 
-  if (category) {
-    where.category = category
+  // Définir l'ordre de tri
+  let orderBy: any = { createdAt: 'desc' }
+  
+  switch (searchParams.sort) {
+    case 'price-asc':
+      orderBy = { price: 'asc' }
+      break
+    case 'price-desc':
+      orderBy = { price: 'desc' }
+      break
+    case 'name':
+      orderBy = { name: 'asc' }
+      break
+    case 'producer':
+      orderBy = { producer: { name: 'asc' } }
+      break
   }
 
-  if (producer) {
-    where.producer = {
-      name: { contains: producer, mode: 'insensitive' }
-    }
-  }
-
-  if (minPrice) {
-    where.price = { ...where.price, gte: parseFloat(minPrice) }
-  }
-
-  if (maxPrice) {
-    where.price = { ...where.price, lte: parseFloat(maxPrice) }
-  }
-
-  // Récupérer les données
-  const [productsData, producersData] = await Promise.all([  // ← Renommé vegetablesData
-    prisma.product.findMany({  // ← Changé de vegetable à product
+  // Récupérer les légumes avec filtres
+  const [vegetables, producers, categories, seasons] = await Promise.all([
+    prisma.vegetable.findMany({
       where,
       include: {
         producer: true
       },
-      orderBy: {
-        createdAt: 'desc'
-      }
+      orderBy
     }),
+    
     prisma.producer.findMany({
-      select: {
-        name: true
-      }
+      select: { id: true, name: true },
+      orderBy: { name: 'asc' }
+    }),
+    
+    prisma.vegetable.findMany({
+      select: { category: true },
+      distinct: ['category']
+    }),
+    
+    prisma.vegetable.findMany({
+      select: { season: true },
+      distinct: ['season']
     })
   ])
 
-  const categories = ['Légumes', 'Fruits', 'Herbes', 'Racines']
+  const uniqueCategories = categories.map(v => v.category).filter(Boolean)
+  const uniqueSeasons = seasons.map(v => v.season).filter(Boolean)
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="container mx-auto px-4 py-8">
-        <h1 className="text-4xl font-bold text-gray-800 mb-8">
-          🥕 Nos Produits Bio
-        </h1>
-
-        {/* Filtres */}
-        <div className="bg-white rounded-lg shadow-md p-6 mb-8">
-          <form className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-            {/* Recherche */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Recherche
-              </label>
-              <input
-                type="text"
-                name="search"
-                placeholder="Nom du produit..."
-                defaultValue={search}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
-              />
-            </div>
-
-            {/* Catégorie */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Catégorie
-              </label>
-              <select
-                name="category"
-                defaultValue={category}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
-              >
-                <option value="">Toutes</option>
-                {categories.map(cat => (
-                  <option key={cat} value={cat}>{cat}</option>
-                ))}
-              </select>
-            </div>
-
-            {/* Producteur */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Producteur
-              </label>
-              <select
-                name="producer"
-                defaultValue={producer}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
-              >
-                <option value="">Tous</option>
-                {producersData.map(p => (
-                  <option key={p.name} value={p.name}>{p.name}</option>
-                ))}
-              </select>
-            </div>
-
-            {/* Prix min */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Prix min (€)
-              </label>
-              <input
-                type="number"
-                name="minPrice"
-                step="0.1"
-                defaultValue={minPrice}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
-              />
-            </div>
-
-            {/* Prix max */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Prix max (€)
-              </label>
-              <input
-                type="number"
-                name="maxPrice"
-                step="0.1"
-                defaultValue={maxPrice}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
-              />
-            </div>
-
-            {/* Bouton */}
-            <div className="md:col-span-2 lg:col-span-5">
-              <button
-                type="submit"
-                className="bg-green-600 text-white px-6 py-2 rounded-md hover:bg-green-700 transition-colors"
-              >
-                Filtrer
-              </button>
-            </div>
-          </form>
-        </div>
-
-        {/* Grille des produits */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-          {productsData.map((product) => (  // ← Changé de vegetablesData à productsData
-            <div key={product.id} className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow">
-              <div className="h-48 bg-gradient-to-br from-green-400 to-green-500 flex items-center justify-center">
-                <span className="text-6xl">🥬</span>
-              </div>
-              <div className="p-4">
-                <h3 className="text-lg font-semibold mb-2">{product.name}</h3>
-                <p className="text-gray-600 text-sm mb-3 line-clamp-2">{product.description}</p>
-                <div className="flex justify-between items-center mb-2">
-                  <span className="text-xl font-bold text-green-600">
-                    {product.price}€/{product.unit}
-                  </span>
-                  <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded">
-                    {product.category}
-                  </span>
-                </div>
-                <p className="text-xs text-gray-500 mb-3">
-                  Par {product.producer.name}
-                </p>
-                <button className="w-full bg-green-600 text-white py-2 rounded hover:bg-green-700 transition-colors">
-                  Ajouter au panier
-                </button>
-              </div>
-            </div>
-          ))}
-        </div>
-
-        {productsData.length === 0 && (
-          <div className="text-center py-12">
-            <div className="text-6xl mb-4">🔍</div>
-            <h3 className="text-xl font-semibold text-gray-700 mb-2">
-              Aucun produit trouvé
-            </h3>
-            <p className="text-gray-500">
-              Essayez de modifier vos critères de recherche
-            </p>
+      {/* Header avec navigation */}
+      <header className="bg-white shadow-sm border-b">
+        <div className="container mx-auto px-4 py-4">
+          <div className="flex items-center justify-between">
+            <Link href="/" className="text-2xl font-bold text-green-600">
+              🥕 HurluBio
+            </Link>
+            <nav className="flex space-x-6">
+              <Link href="/" className="text-gray-600 hover:text-green-600">
+                Accueil
+              </Link>
+              <Link href="/vegetables" className="text-green-600 font-medium">
+                Légumes
+              </Link>
+              <Link href="/orders" className="text-gray-600 hover:text-green-600">
+                Mes commandes
+              </Link>
+            </nav>
           </div>
-        )}
+        </div>
+      </header>
+
+      <div className="container mx-auto px-4 py-8">
+        {/* Titre et compteur */}
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">
+            Catalogue des légumes bio
+          </h1>
+          <p className="text-gray-600">
+            {vegetables.length} légume{vegetables.length > 1 ? 's' : ''} disponible{vegetables.length > 1 ? 's' : ''}
+          </p>
+        </div>
+
+        <div className="flex flex-col lg:flex-row gap-8">
+          {/* Sidebar des filtres */}
+          <aside className="lg:w-64">
+            <FilterSidebar 
+              producers={producers}
+              categories={uniqueCategories}
+              seasons={uniqueSeasons}
+              currentFilters={searchParams}
+            />
+          </aside>
+
+          {/* Liste des légumes */}
+          <main className="flex-1">
+            {/* Barre de recherche et tri */}
+            <div className="mb-6">
+              <SearchAndSort 
+                currentSearch={searchParams.search}
+                currentSort={searchParams.sort}
+              />
+            </div>
+
+            {/* Grille des légumes */}
+            {vegetables.length > 0 ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                {vegetables.map((vegetable) => (
+                  <VegetableCard key={vegetable.id} vegetable={vegetable} />
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-16">
+                <div className="text-6xl mb-4">🔍</div>
+                <h3 className="text-xl font-semibold text-gray-600 mb-2">
+                  Aucun légume trouvé
+                </h3>
+                <p className="text-gray-500">
+                  Essayez d'ajuster vos filtres de recherche
+                </p>
+                <Link 
+                  href="/vegetables"
+                  className="inline-block mt-4 text-green-600 hover:text-green-800"
+                >
+                  Réinitialiser les filtres
+                </Link>
+              </div>
+            )}
+          </main>
+        </div>
       </div>
     </div>
   )

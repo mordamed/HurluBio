@@ -42,13 +42,13 @@ const { addToCart } = useCart()  // ← Utilisez addToCart
   const handleAddToCart = async () => {
     setIsAdding(true)
     
-addToCart({
-  id: vegetable.id,
-  name: vegetable.name,
-  price: vegetable.price,
-  unit: vegetable.unit,
-  producerName: vegetable.producer.name  // Ajoutez cette ligne
-})
+  addToCart({  // ← En addToCart
+    id: vegetable.id,
+    name: vegetable.name,
+    price: vegetable.price,
+    unit: vegetable.unit,
+    producerName: vegetable.producerName
+  })
 
     // Animation feedback
     setTimeout(() => {
